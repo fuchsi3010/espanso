@@ -264,6 +264,10 @@ fn extract_uppercasing_style(m: &Match) -> Option<UpperCasingStyle> {
 }
 
 fn is_propagate_case(m: &Match) -> bool {
+    // Changing the casing of an image path would break it
+    if matches!(m.effect, MatchEffect::Image(_)) {
+        return false;
+    }
     if let MatchCause::Trigger(cause) = &m.cause {
         cause.propagate_case
     } else {
@@ -324,10 +328,11 @@ mod tests {
     use espanso_config::matches::{ImageEffect, TriggerCause};
 
     #[test]
-    fn image_match_without_vars_gets_a_template() {
+    fn image_match_gets_a_template_without_casing() {
         let m = Match {
             cause: MatchCause::Trigger(TriggerCause {
                 triggers: vec![":img".to_string()],
+                propagate_case: true,
                 ..Default::default()
             }),
             effect: MatchEffect::Image(ImageEffect {
@@ -336,6 +341,7 @@ mod tests {
             }),
             ..Default::default()
         };
+        assert!(!is_propagate_case(&m));
         let template = convert_to_template(&m).unwrap();
         assert_eq!(template.ids, vec![":img".to_string()]);
         assert_eq!(template.body, "/tmp/{{global_var}}");
