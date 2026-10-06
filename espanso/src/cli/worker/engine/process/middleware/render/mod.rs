@@ -102,6 +102,10 @@ fn generate_context<'a>(
     let mut global_vars = Vec::new();
 
     for m in &match_set.matches {
+        // Image paths must not be picked up by `match` variables
+        if matches!(m.effect, MatchEffect::Image(_)) {
+            continue;
+        }
         if let Some(Some(template)) = template_map.get(&m.id) {
             templates.push(template);
         }
@@ -346,5 +350,15 @@ mod tests {
         assert_eq!(template.ids, vec![":img".to_string()]);
         assert_eq!(template.body, "/tmp/{{global_var}}");
         assert!(template.vars.is_empty());
+
+        // Rendered on its own, but not a target for `match` variables
+        let template_map = HashMap::from([(m.id, Some(template))]);
+        let match_set = MatchSet {
+            matches: vec![&m],
+            global_vars: Vec::new(),
+        };
+        let global_vars_map = HashMap::new();
+        let context = generate_context(&match_set, &template_map, &global_vars_map);
+        assert!(context.templates.is_empty());
     }
 }
